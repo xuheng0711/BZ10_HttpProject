@@ -763,7 +763,7 @@ namespace BZ10
                 if (tcpclient.clientSocket.Connected)
                 {
                     tcpclient.sendLocation(lat, lon);
-                }
+                } 
             }
             catch (Exception ex)
             {
