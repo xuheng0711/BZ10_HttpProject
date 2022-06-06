@@ -32,6 +32,9 @@ using Emgu.CV.Util;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System.Timers;
+using System.Threading.Tasks;
+using System.Speech.Synthesis;
+using System.Globalization;
 
 namespace BZ10
 {
@@ -2324,6 +2327,25 @@ namespace BZ10
                 ctrls[index].Visible = true;
                 Application.DoEvents();
                 locaiton = index + 1;
+
+                string message = "";
+                switch (index)
+                {
+                    case 0: message = "到达原点位置"; break;
+                    case 2: message = "到达推片位置，推片就绪"; break;
+                    case 4: message = "滴加粘附液"; break;
+                    case 6: message = "收集孢子"; break;
+                    case 8: message = "滴加培养液"; break;
+                    case 10: message = "推片到拍照位置"; break;
+                    case 12: message = "回收玻片"; break;
+                    default: break;
+                }
+                if (!string.IsNullOrEmpty(message))
+                {
+                    Thread thread = new Thread(new ParameterizedThreadStart(Speaking));
+                    thread.IsBackground = true;
+                    thread.Start(message);
+                }
             }
             catch (Exception ex)
             {
@@ -2333,6 +2355,46 @@ namespace BZ10
 
         }
 
+
+        #region 语音播报
+        /// <summary>
+        /// 语音播报
+        /// </summary>
+        /// <param name="saying"></param>
+        private void Speaking(object saying)
+        {
+            string say = saying + "";
+            Task task = new Task(() =>
+            {
+                SpeechSynthesizer speech = new SpeechSynthesizer();
+                speech.Volume = 100; //音量
+                speech.Rate = 0;//语速-10至10
+                CultureInfo keyboardCulture = System.Windows.Forms.InputLanguage.CurrentInputLanguage.Culture;
+                InstalledVoice neededVoice = speech.GetInstalledVoices(keyboardCulture).FirstOrDefault();
+                if (neededVoice == null)
+                {
+                    say = "";
+                }
+                else
+                {
+                    speech.SelectVoice(neededVoice.VoiceInfo.Name);
+                }
+                try
+                {
+                    if (!string.IsNullOrEmpty(say))
+                    {
+                        speech.Speak(say);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebOutPut.WriteLog(LogType.Error, LogDetailedType.Ordinary, "语音播报异常" + ex.Message);
+                    return;
+                }
+            });
+            task.Start();
+        }
+        #endregion
 
         /*
          * 此函数为设备启动后的初始化函数：
