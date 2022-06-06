@@ -203,7 +203,7 @@ namespace BZ10
             timer9.Interval = 1000;
             timer10.Elapsed += new ElapsedEventHandler(timer10_Elapsed);//任务计划
             timer10.Interval = 1000;
-            timer11.Elapsed += new ElapsedEventHandler(timer11_Elapsed);//任务计划
+            timer11.Elapsed += new ElapsedEventHandler(timer11_Elapsed);//图像上传
             timer11.Interval = 1000;
 #if DEBUG
             this.WindowState = FormWindowState.Normal;
@@ -451,15 +451,15 @@ namespace BZ10
                     }
                     StartOldNewCamera();
                     if (oldToupCam == null && m_pMyCamera == null)
-                    //    return;
+                        return;
                     if (SerialInit())
                     {
-                       // Cmd.InitComm(serialPort1);
-                       // timer10.Start();
-                       // Thread thread = new Thread(DevRun_T);
-                       // thread.IsBackground = true;
-                       // thread.Start();
-                       // timer6.Start();
+                        Cmd.InitComm(serialPort1);
+                        //timer10.Start();
+                        Thread thread = new Thread(DevRun_T);
+                        thread.IsBackground = true;
+                        thread.Start();
+                        timer6.Start();
                     }
                 }
                 else
@@ -763,7 +763,7 @@ namespace BZ10
                 if (tcpclient.clientSocket.Connected)
                 {
                     tcpclient.sendLocation(lat, lon);
-                } 
+                }
             }
             catch (Exception ex)
             {
@@ -4144,6 +4144,10 @@ namespace BZ10
                     DebOutPut.WriteLog(LogType.Normal, LogDetailedType.Ordinary, "拍照剩余对焦:" + shengyuCount + " 次");
                     int imageStep = i + int.Parse(Param.MinSteps);
                     string path = PhotographAnalysis(dicImageAnalysisResult, dicImageLenght, dicImageStep, imageStep, nstep.ToString());
+                    if (string.IsNullOrEmpty(path))
+                    {
+                        continue;
+                    }
                     Console.WriteLine("当前对焦位置：" + i);
                     if (isCrackSporeAnalysis)
                     {
@@ -4219,6 +4223,10 @@ namespace BZ10
                             int imageStep = j + yJustCom;
                             //拍照分析
                             string path = PhotographAnalysis(dicImageAnalysisResult, dicImageLenght, dicImageStep, imageStep, nstep.ToString());
+                            if (string.IsNullOrEmpty(path))
+                            {
+                                continue;
+                            }
                             Console.WriteLine("当前对焦位置：" + j);
                             //精准对焦启动分析
                             if (isCrackSporeAnalysis)
@@ -4320,6 +4328,10 @@ namespace BZ10
                             int imageStep = j + tranStepsMin;
                             //拍照分析
                             string path = PhotographAnalysis(dicImageAnalysisResult, dicImageLenght, dicImageStep, imageStep, nstep.ToString());
+                            if (string.IsNullOrEmpty(path))
+                            {
+                                continue;
+                            }
                             Console.WriteLine("当前对焦位置：" + j);
                             //精准对焦启动分析
                             if (isCrackSporeAnalysis)
@@ -4725,33 +4737,33 @@ namespace BZ10
 
                     //TODO：打水印
                     #region 打水印
-                    //if (Param.version == "2")//带光控雨控
-                    //{
-                    //    using (Graphics g = Graphics.FromImage(bitmap))
-                    //    {
-                    //        string devNum = "ID:" + Param.DeviceID;
-                    //        string time = "时间:" + collectTime;
-                    //        string wendu = (this.lb_wd.Text.Trim() == "温度" || this.lb_wd.Text.Trim() == "无数据") ? "温度:---" : this.lb_wd.Text.Trim();
-                    //        string shidu = (this.lb_sd.Text.Trim() == "湿度" || this.lb_sd.Text.Trim() == "无数据") ? "湿度:---" : this.lb_sd.Text.Trim();
-                    //        string guangzhao = (this.lb_gz.Text.Trim() == "光照" || this.lb_gz.Text.Trim() == "无数据") ? "光照:---" : this.lb_gz.Text.Trim();
-                    //        string yukong = (this.lb_yk.Text.Trim() == "雨控" || this.lb_yk.Text.Trim() == "无数据") ? "雨控:---" : this.lb_yk.Text.Trim();
-                    //        string hj = wendu + "   " + shidu + "   " + guangzhao + "   " + yukong;
-                    //        string context = devNum + "   " + time + "   " + hj;
-                    //        g.DrawString(context, new Font("仿宋_GB2312", 40, FontStyle.Bold), System.Drawing.Brushes.Yellow, new PointF(50, 10));
-                    //    }
-                    //}
-                    //else if (Param.version == "1")//不带光控雨控
-                    //{
-                    //    using (Graphics g = Graphics.FromImage(bitmap))
-                    //    {
-                    //        string devNum = "ID:" + Param.DeviceID;
-                    //        string time = "时间:" + collectTime;
-                    //        string context = devNum + "   " + time;
-                    //        g.DrawString(context, new Font("仿宋_GB2312", 40, FontStyle.Bold), System.Drawing.Brushes.Yellow, new PointF(50, 10));
-                    //        //g.DrawString(collectTime, new Font("宋体", 100), System.Drawing.Brushes.Yellow, new PointF(2500, 100));
-                    //        //g.DrawString(Param.DeviceID, new Font("宋体", 100), System.Drawing.Brushes.Yellow, new PointF(100, 100));
-                    //    }
-                    //} 
+                    if (Param.version == "2")//带光控雨控
+                    {
+                        using (Graphics g = Graphics.FromImage(bitmap))
+                        {
+                            string devNum = "ID:" + Param.DeviceID;
+                            string time = "时间:" + collectTime;
+                            string wendu = (this.lb_wd.Text.Trim() == "温度" || this.lb_wd.Text.Trim() == "无数据") ? "温度:---" : this.lb_wd.Text.Trim();
+                            string shidu = (this.lb_sd.Text.Trim() == "湿度" || this.lb_sd.Text.Trim() == "无数据") ? "湿度:---" : this.lb_sd.Text.Trim();
+                            string guangzhao = (this.lb_gz.Text.Trim() == "光照" || this.lb_gz.Text.Trim() == "无数据") ? "光照:---" : this.lb_gz.Text.Trim();
+                            string yukong = (this.lb_yk.Text.Trim() == "雨控" || this.lb_yk.Text.Trim() == "无数据") ? "雨控:---" : this.lb_yk.Text.Trim();
+                            string hj = wendu + "   " + shidu + "   " + guangzhao + "   " + yukong;
+                            string context = devNum + "   " + time + "   " + hj;
+                            g.DrawString(context, new Font("仿宋_GB2312", 40, FontStyle.Bold), System.Drawing.Brushes.Yellow, new PointF(50, 10));
+                        }
+                    }
+                    else if (Param.version == "1")//不带光控雨控
+                    {
+                        using (Graphics g = Graphics.FromImage(bitmap))
+                        {
+                            string devNum = "ID:" + Param.DeviceID;
+                            string time = "时间:" + collectTime;
+                            string context = devNum + "   " + time;
+                            g.DrawString(context, new Font("仿宋_GB2312", 40, FontStyle.Bold), System.Drawing.Brushes.Yellow, new PointF(50, 10));
+                            //g.DrawString(collectTime, new Font("宋体", 100), System.Drawing.Brushes.Yellow, new PointF(2500, 100));
+                            //g.DrawString(Param.DeviceID, new Font("宋体", 100), System.Drawing.Brushes.Yellow, new PointF(100, 100));
+                        }
+                    }
                     #endregion 打水印
                     Bitmap temp = new Bitmap(bitmap);
                     bitmap.Dispose();
@@ -4785,7 +4797,7 @@ namespace BZ10
         int moveDownSteps = 50;//下移步数
         int moveInterval = 1;//移动间隔
         int accurateMapSelection = 5;//精准选图
-        bool isCrackSporeAnalysis = true;//是否对图像启用裂孢分析处理，如果启用，则请把原位选图，横向首选、复选，纵向首选、复选 改为0
+        bool isCrackSporeAnalysis = false;//是否对图像启用裂孢分析处理，如果启用，则请把原位选图，横向首选、复选，纵向首选、复选 改为0
         int triggerPosition = -1;//本次精准对焦触发位置（不算起始位置）
         //int triggerEndPosition = 0;//本次精准对焦触发终止位置（不算起始位置）
 
@@ -4865,7 +4877,7 @@ namespace BZ10
                     //    isExist = true;
                     //    DebOutPut.DebLog("发现裂孢！");
                     //}
-                     //{
+                    //{
                     //    DebOutPut.DebLog("裂孢已经发现过了，但是目前已经看不见了！");
                     //    //triggerEndPosition = j - moveUpSteps;
                     //    //if (triggerEndPosition < 0)
@@ -5552,8 +5564,8 @@ namespace BZ10
             else
             {
                 FileInfo fileInfo = new FileInfo(path);
-                double n = fileInfo.Length;
-                dicImageLenght.Add(path, n);
+                double fileSize = fileInfo.Length;
+                dicImageLenght.Add(path, fileSize);
             }
             if (dicImageStep != null)
                 dicImageStep.Add(path, imageStep);//保存该照片从X9到现在位置的步数
