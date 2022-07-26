@@ -42,7 +42,7 @@ namespace BZ10
     public partial class MainForm : Form
     {
         //运行主流程控制
-        int inTimer1 = 0;
+        int inTimer1 = 0;//测试
         System.Timers.Timer timer1 = new System.Timers.Timer();
         //各段时间是否到达控制
         int inTimer2 = 0;
