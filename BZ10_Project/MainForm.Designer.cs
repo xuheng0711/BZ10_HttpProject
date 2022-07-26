@@ -3041,6 +3041,7 @@ namespace BZ10
             this.CbSysVersion.Font = new System.Drawing.Font("宋体", 13.5F);
             this.CbSysVersion.FormattingEnabled = true;
             this.CbSysVersion.Items.AddRange(new object[] {
+            "无水印版",
             "普通版",
             "定制版"});
             this.CbSysVersion.Location = new System.Drawing.Point(92, 310);

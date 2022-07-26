@@ -108,7 +108,7 @@ namespace BZ10
         public static string remain = "0";
 
         public static List<WorkTime> worllist = new List<WorkTime>();
-        public static string version = "1";//成为为标准版还是定制版  1标准版  2定制版
+        public static string version = "0";//成为为标准版还是定制版 0无水印 1标准版  2定制版
         public static string dataType = "";//时间格式
         //相机版本    1：老版相机U口相机    2：新版海康相机
         public static string cameraVersion = "";

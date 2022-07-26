@@ -74,6 +74,9 @@ namespace BZ10
         //连续上传
         int inTimer11 = 0;
         System.Timers.Timer timer11 = new System.Timers.Timer();
+        //检测相机摄像头是否打开
+        int inTimer12 = 0;
+        System.Timers.Timer timer12 = new System.Timers.Timer();
 
         public static UpdataConfigShow updataConfigShow;
         List<string> ImgNames = new List<string>();
@@ -208,6 +211,9 @@ namespace BZ10
             timer10.Interval = 1000;
             timer11.Elapsed += new ElapsedEventHandler(timer11_Elapsed);//图像上传
             timer11.Interval = 1000;
+            timer12.Elapsed += new ElapsedEventHandler(timer12_Elapsed); //检测相机摄像头是否打开
+            timer12.Interval = 15000;
+
 #if DEBUG
             this.WindowState = FormWindowState.Normal;
 #else
@@ -230,6 +236,19 @@ namespace BZ10
                 if (Param.isContinuousUpload == "1")
                     SendCollectionData();
                 Interlocked.Exchange(ref inTimer11, 0);
+            }
+        }
+        /// <summary>
+        ///  检测相机摄像头是否打开
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void timer12_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if (Interlocked.Exchange(ref inTimer12, 1) == 0)
+            {
+                StartOldNewCamera();
+                Interlocked.Exchange(ref inTimer12, 0);
             }
         }
 
@@ -366,6 +385,12 @@ namespace BZ10
             timer11.Stop();
             Interlocked.Exchange(ref inTimer11, 0);
         }
+        private void Timer12Stop()
+        {
+            DebOutPut.WriteLog(LogType.Normal, LogDetailedType.Ordinary, "Timer12_Stop");
+            timer12.Stop();
+            Interlocked.Exchange(ref inTimer12, 0);
+        }
         #endregion
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -447,14 +472,13 @@ namespace BZ10
                 {
                     ReadRecordDate();
                     timer10.Start();
+                    timer12.Start();
                     if (Param.isContinuousUpload == "1")
                     {
                         this.timer11.Interval = double.Parse(Param.SearchInterval) * 60000;
                         this.timer11.Start();
                     }
-                    StartOldNewCamera();
-                    if (oldToupCam == null && m_pMyCamera == null)
-                        return;
+
                     if (SerialInit())
                     {
                         Cmd.InitComm(serialPort1);
@@ -582,15 +606,16 @@ namespace BZ10
         /// <summary>
         /// 启动新旧相机
         /// </summary>
-        private void StartOldNewCamera()
+        private bool StartOldNewCamera()
         {
+            bool bIsOpen = true;
             cameraErrStr = "";
             if (Param.cameraVersion == "1")
             {
                 if (oldToupCam == null)
                 {
                     //启动老版相机
-                    StartOldCamera();
+                    bIsOpen = StartOldCamera();
                 }
             }
             else if (Param.cameraVersion == "2")
@@ -600,37 +625,43 @@ namespace BZ10
                     //关闭新相机
                     CameraClose();
                     //启动新版相机
-                    StartNewCamera();
+                    bIsOpen = StartNewCamera();
                 }
             }
+            return bIsOpen;
         }
 
 
         /// <summary>
         /// 启动老版相机
         /// </summary>
-        private void StartOldCamera()
+        private bool StartOldCamera()
         {
             try
             {
                 int index = 0;
-                for (int i = 0; i < 3; i++)
+                while (index < 3)
                 {
                     Start_OldGrabImage();
                     if (oldToupCam == null)
                     {
                         index++;
-                        DebOutPut.DebLog("第 " + (i + 1) + " 次启动相机失败！");
+                        DebOutPut.DebLog("第 " + (index + 1) + " 次启动相机失败！");
+                        Thread.Sleep(10000);
                     }
                     else
                     {
                         DebOutPut.DebLog("启动相机成功！");
                         statusInfo = "正常";
-                        label18.Text = "无数据";
-                        label18.ForeColor = System.Drawing.Color.FromArgb(0, 0, 0);
+                        if (label18.Text.Contains("相机"))
+                        {
+                            label18.Text = "无数据";
+                            label18.ForeColor = System.Drawing.Color.FromArgb(0, 0, 0);
+                        }
                         break;
                     }
                 }
+
                 if (index == 3)
                 {
                     if (cameraErrStr == "")
@@ -640,7 +671,7 @@ namespace BZ10
                     statusInfo = cameraErrStr;
                     label18.Text = cameraErrStr + "，请处理！";
                     label18.ForeColor = System.Drawing.Color.Red;
-                    return;
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -651,34 +682,41 @@ namespace BZ10
                 DebOutPut.DebLog("老相机启动异常：" + ex.ToString());
                 DebOutPut.WriteLog(LogType.Error, LogDetailedType.Ordinary, "老相机启动异常：" + ex.ToString());
                 OldOnEventError();
+                return false;
             }
+            return true;
         }
 
         /// <summary>
         /// 启动新版相机
         /// </summary>
-        private void StartNewCamera()
+        private bool StartNewCamera()
         {
             try
             {
                 int index = 0;
-                for (int i = 0; i < 3; i++)
+                while (index < 3)
                 {
                     Start_GrabImage();
                     if (m_pMyCamera == null)
                     {
                         index++;
-                        DebOutPut.DebLog("第 " + (i + 1) + " 次启动相机失败！");
+                        DebOutPut.DebLog("第 " + (index + 1) + " 次启动相机失败！");
+                        Thread.Sleep(10000);
                     }
                     else
                     {
                         DebOutPut.DebLog("启动相机成功！");
                         statusInfo = "正常";
-                        label18.Text = "无数据";
-                        label18.ForeColor = System.Drawing.Color.FromArgb(0, 0, 0);
+                        if (label18.Text.Contains("相机"))
+                        {
+                            label18.Text = "无数据";
+                            label18.ForeColor = System.Drawing.Color.FromArgb(0, 0, 0);
+                        }
                         break;
                     }
                 }
+
                 if (index == 3)
                 {
                     if (cameraErrStr == "")
@@ -688,7 +726,7 @@ namespace BZ10
                     statusInfo = cameraErrStr;
                     label18.Text = cameraErrStr + "，请处理！";
                     label18.ForeColor = System.Drawing.Color.Red;
-                    return;
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -699,7 +737,9 @@ namespace BZ10
                 DebOutPut.DebLog("新相机启动异常：" + ex.ToString());
                 DebOutPut.WriteLog(LogType.Error, LogDetailedType.Ordinary, "新相机启动异常：" + ex.ToString());
                 CameraClose();
+                return false;
             }
+            return true;
         }
 
         /// <summary>
@@ -4144,10 +4184,11 @@ namespace BZ10
         {
             try
             {
-                StartOldNewCamera();
-                if (oldToupCam == null && m_pMyCamera == null)
+                if (!StartOldNewCamera())
                 {
                     button12.Text = "自动对焦";
+                    startTimer1Time = DateTime.Now;
+                    timer1.Start();
                     return;
                 }
                 GC.Collect();
@@ -4196,8 +4237,7 @@ namespace BZ10
                     if (shengyuCount < 0)
                         shengyuCount = 0;
                     label30.Text = "拍照剩余对焦:\r\n" + shengyuCount + " 次";
-                    StartOldNewCamera();
-                    if (oldToupCam == null && m_pMyCamera == null)
+                    if (!StartOldNewCamera())
                     {
                         Thread.Sleep(2000);
                         continue;
@@ -4274,8 +4314,7 @@ namespace BZ10
                             if (shengyuCount < 0)
                                 shengyuCount = 0;
                             label30.Text = "拍照剩余对焦:\r\n" + shengyuCount + " 次";
-                            StartOldNewCamera();
-                            if (oldToupCam == null && m_pMyCamera == null)
+                            if (!StartOldNewCamera())
                             {
                                 Thread.Sleep(2000);
                                 continue;
@@ -4379,8 +4418,7 @@ namespace BZ10
                             if (shengyuCount < 0)
                                 shengyuCount = 0;
                             label30.Text = "拍照剩余对焦:\r\n" + shengyuCount + " 次";
-                            StartOldNewCamera();
-                            if (oldToupCam == null && m_pMyCamera == null)
+                            if (!StartOldNewCamera())
                             {
                                 Thread.Sleep(2000);
                                 continue;
@@ -4923,8 +4961,7 @@ namespace BZ10
                         shengyuCount = 0;
 
                     label30.Text = Tips + "\r\n剩余精准对焦:\r\n" + shengyuCount + " 次";
-                    StartOldNewCamera();
-                    if (oldToupCam == null && m_pMyCamera == null)
+                    if (!StartOldNewCamera())
                     {
                         Thread.Sleep(2000);
                         continue;
@@ -6833,6 +6870,8 @@ namespace BZ10
             Timer2Stop();
             Timer3Stop();
             Timer4Stop();
+            Timer12Stop();
+
             DebOutPut.WriteLog(LogType.Normal, LogDetailedType.Ordinary, "设备被关闭！");
             SoftKeyboardCtrl.CloseWindow();
             System.Environment.Exit(0);
@@ -7916,10 +7955,19 @@ namespace BZ10
                 this.CbCameraVersion.Text = "数字相机";
             else if (Param.cameraVersion == "2")
                 this.CbCameraVersion.Text = "海康相机";
-            if (Param.version == "1")
+
+            if (Param.version == "0")
+            {
+                this.CbSysVersion.Text = "无水印版";
+            }
+            else if (Param.version == "1")
+            {
                 this.CbSysVersion.Text = "普通版";
-            if (Param.version == "2")
+            }
+            else if (Param.version == "2")
+            {
                 this.CbSysVersion.Text = "定制版";
+            }
             this.TxtClearCount.Text = Param.clearCount;
             this.TxtLeftMaxSteps.Text = Param.leftMaxSteps;
             this.TxtRightMaxSteps.Text = Param.rightMaxSteps;
@@ -8027,10 +8075,14 @@ namespace BZ10
                 currSelectCameraVersion = "2";
             string sysVersion = Param.Read_ConfigParam(configfileName, "Config", "version");
             string currSysVersion = "";
-            if (this.CbSysVersion.Text == "普通版")
+
+            if (this.CbSysVersion.Text == "无水印版")
+                currSysVersion = "0";
+            else if (this.CbSysVersion.Text == "普通版")
                 currSysVersion = "1";
             else if (this.CbSysVersion.Text == "定制版")
                 currSysVersion = "2";
+
             string runFlag1 = Param.Read_ConfigParam(configfileName, "Config", "RunFlag");
             string currRunFlag = "";
             if (this.TxtRunMode.Text == "自动")
@@ -8150,6 +8202,9 @@ namespace BZ10
                 currSysVersion = "1";
             else if (this.CbSysVersion.Text == "定制版")
                 currSysVersion = "2";
+            else if (this.CbSysVersion.Text == "无水印版")
+                currSysVersion = "0";
+
             Param.Set_ConfigParm(configfileName, "Config", "version", currSysVersion);
             Param.Set_ConfigParm(configfileName, "Config", "ClearCount", this.TxtClearCount.Text);
 
@@ -8381,7 +8436,7 @@ namespace BZ10
                     Param.Set_ConfigParm(configfileName, "Config", "remain", "300");
                     Param.Set_ConfigParm(configfileName, "Config", "slideCorrection", "0");
                     Param.Set_ConfigParm(configfileName, "Config", "dataType", "0");
-                    Param.Set_ConfigParm(configfileName, "Config", "version", "1");
+                    Param.Set_ConfigParm(configfileName, "Config", "version", "0");
                     Param.Set_ConfigParm(configfileName, "Config", "CameraVersion", "2");
                     Param.Set_ConfigParm(configfileName, "Config", "Compensate", "-1");
                     Param.Set_ConfigParm(configfileName, "Config", "MapSelectionScheme", "1");
